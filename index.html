@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="theme-color" content="#03045e">
+  <title>Todo List</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+  <div class="container">
+
+    <div class="header">
+
+      <h2 class="titr">What ToDo</h2>
+
+      <button id="settingsBtn">
+        <i class="bi bi-gear"></i>
+      </button>
+
+      <div class=" input-container">
+        <input type="text" id="input" placeholder="یه کاری بنویس...">
+        <button id="addBtn">
+          ↓
+        </button>
+        <div id="tooltip"></div>
+      </div>
+
+      <div class="search-container">
+        <input
+        type="text"
+        id="searchInput"
+        placeholder="جستجو..."
+        >
+
+        <span id="clearSearch">
+          <i class="bi bi-x-circle-fill"></i>
+        </span>
+      </div>
+
+      <div class="controls-wrapper">
+        <div class="filters-row">
+          <div class="control-group">
+            <label class="control-label">
+              فیلتر
+            </label>
+            <div class="custom-select">
+              <div class="select-btn" id="selectBtn">
+                <span id="selectedText">همه</span>
+                <span class="arrow">⌄</span>
+              </div>
+              <div class="select-options" id="selectOptions">
+                <div class="option active" data-value="all">
+                  همه
+                </div>
+                <div class="option" data-value="completed">
+                  انجام شده
+                </div>
+                <div class="option" data-value="remaining">
+                  باقی مانده
+                </div>
+                <div class="option" data-value="priority">
+                  دارای اولویت
+                </div>
+                <div class="option" data-value="trash">
+                  <i class="bi bi-trash"></i> سطل زباله
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="control-group">
+            <label class="control-label">
+              مرتب سازی
+            </label>
+            <div class="custom-select sort-select">
+              <div class="select-btn" id="sortBtn">
+                <span id="sortSelectedText">اتوماتیک</span>
+                <span class="arrow">⌄</span>
+              </div>
+              <div class="select-options" id="sortOptions">
+                <div class="option sort-option" data-value="auto">
+                  اتوماتیک
+                </div>
+                <!-- <div class="option sort-option" data-value="manual">
+                  دستی
+                </div> -->
+                <div class="option sort-option" data-value="newest">
+                  جدیدترین
+                </div>
+                <div class="option sort-option" data-value="oldest">
+                  قدیمی ترین
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="stats">
+          <span id="completedCount">0</span>
+          انجام شده | 
+          <span id="remainingCount">0</span>
+          باقی مانده
+        </div>
+      </div>
+
+    </div>
+
+    <ul id="list"></ul>
+    <p id="emptyMessage">
+      هنوز کاری ثبت نشده ✨
+    </p>
+  </div>
+
+  <div id="settingsModal" class="settings-modal">
+    <div class="settings-content">
+
+      <div class="settings-header">
+
+        <h3>تنظیمات</h3>
+
+        <button id="closeSettings">
+          <i class="bi bi-x-lg"></i>
+        </button>
+
+      </div>
+
+      <div class="settings-body">
+        تنظیمات برنامه
+
+        <div class="settings-item">
+
+          <label for="darkModeToggle">
+            حالت تاریک
+          </label>
+
+          <label class="switch">
+
+            <input type="checkbox" id="darkModeToggle">
+            <span class="slider"></span>
+
+          </label>
+
+        </div>
+
+        <div class="settings-item">
+
+          <label for="confirmDeleteToggle">
+            تایید پیش از حذف
+          </label>
+
+          <label class="switch">
+
+            <input type="checkbox" id="confirmDeleteToggle">
+            <span class="slider"></span>
+
+          </label>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <div id="deleteModal" class="delete-modal">
+    <div class="delete-content">
+
+      <h3>حذف آیتم</h3>
+
+      <p id="deleteModalText">
+        آیا از حذف این آیتم مطمئن هستید؟
+      </p>
+
+      <div class="delete-actions">
+
+        <button id="cancelDeleteBtn">
+          انصراف
+        </button>
+
+        <button id="confirmDeleteBtn">
+          حذف
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
