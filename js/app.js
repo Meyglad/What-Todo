@@ -4,7 +4,6 @@
 const input = document.getElementById("input");
 const button = document.getElementById("addBtn");
 const list = document.getElementById("list");
-const tooltip = document.getElementById("tooltip");
 const completedCount = document.getElementById("completedCount");
 const remainingCount = document.getElementById("remainingCount");
 const emptyMessage = document.getElementById("emptyMessage");
@@ -22,13 +21,26 @@ const sortBtn = document.getElementById("sortBtn");
 const sortOptions = document.getElementById("sortOptions");
 const sortSelectedText = document.getElementById("sortSelectedText");
 const sortOptionItems = document.querySelectorAll(".sort-option");
-const todoTooltip = document.createElement("div");
-const settingsModal = document.getElementById("settingsModal");
 const closeSettings = document.getElementById("closeSettings");
 const confirmDeleteToggle = document.getElementById("confirmDeleteToggle");
-const deleteModal = document.getElementById("deleteModal");
 const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
 const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+const deleteModal = document.getElementById("deleteModal");
+const updateToast = document.getElementById("updateToast");
+const updateBtn = document.getElementById("updateBtn");
+const updateVersionText = document.getElementById("updateVersionText");
+const appVersionText = document.getElementById("appVersionText");
+const appUpdateDate = document.getElementById("appUpdateDate");
+const toolbarSettingsBtn = document.getElementById("toolbarSettingsBtn");
+const toolbarSearchBtn = document.getElementById("toolbarSearchBtn");
+const toolbarSearchBox = document.getElementById("toolbarSearchBox");
+const toolbarSearchClose = document.getElementById("toolbarSearchClose");
+const toolbarSearchInput = document.getElementById("toolbarSearchInput");
+const exportBtn = document.getElementById("exportBtn");
+const importBtn = document.getElementById("importBtn");
+const importFile = document.getElementById("importFile");
+const installAppBtn = document.getElementById("installAppBtn");
+const installAppItem = document.getElementById("installAppItem");
 
 
 //--------------------------------
@@ -41,15 +53,52 @@ let searchValue = "";
 let draggedItem = null;
 let todoToDelete = null;
 
+import {
+    saveTodos,
+    getTodos
+} from "./storage.js";
 
+import {
+    showMessage
+} from "./ui.js";
 
+import {
+  openSettingsModal,
+  closeSettingsModal
+} from "./modals.js";
 
+import {
+  initTheme
+} from "./theme.js";
 
-function isDuplicateTodo(text, excludeId = null){
+import {
+  setupTodoTooltip
+} from "./tooltip.js";
+
+import {
+  APP_VERSION,
+  LAST_UPDATE
+} from "./version.js";
+
+import {
+  exportTodos,
+  importTodos
+} from "./backup.js";
+
+appVersionText.textContent = APP_VERSION;
+appUpdateDate.textContent = LAST_UPDATE;
+updateVersionText.textContent = `ورژن ${APP_VERSION}`;
+
+updateBtn.addEventListener("click", () => {
+  location.reload();
+});
+
+async function isDuplicateTodo(text, excludeId = null){
 
   const normalizedText = text.trim().toLowerCase();
+  const todos = await getTodos();
 
-  return getTodos().some(todo =>
+  return todos.some(todo =>
     todo.id !== excludeId &&
     todo.text.trim().toLowerCase() === normalizedText
   );
@@ -83,18 +132,18 @@ function createActionButton(className, iconHtml){
 input.value = "";
 searchInput.value = "";
 confirmDeleteToggle.checked = confirmDelete;
+initTheme(darkModeToggle);
 darkModeToggle.checked = document.body.classList.contains("dark");
-initTheme();
 
 cancelDeleteBtn.addEventListener("click", function(){
   closeDeleteModal();
 });
 
-confirmDeleteBtn.addEventListener("click", function(){
+confirmDeleteBtn.addEventListener("click", async function(){
 
   if(!todoToDelete) return;
 
-  let todos = getTodos();
+  let todos = await getTodos();
 
   todos = todos.map(t => {
 
@@ -112,9 +161,9 @@ confirmDeleteBtn.addEventListener("click", function(){
 
   });
 
-  saveTodos(todos);
+  await saveTodos(todos);
   closeDeleteModal();
-  renderList();
+  await renderList();
 
 });
 
@@ -126,30 +175,27 @@ deleteModal.addEventListener("click", function(event){
 
 });
 
-todoTooltip.classList.add("todo-tooltip");
-document.body.appendChild(todoTooltip);
+// searchInput.addEventListener("input", async function(){
+//   searchValue = searchInput.value.toLowerCase();
 
-searchInput.addEventListener("input", function(){
-  searchValue = searchInput.value.toLowerCase();
+//   if(searchInput.value.trim() !== ""){
+//     clearSearch.classList.add("show");
+//   } else {
+//     clearSearch.classList.remove("show");
+//   }
 
-  if(searchInput.value.trim() !== ""){
-    clearSearch.classList.add("show");
-  } else {
-    clearSearch.classList.remove("show");
-  }
+//   await renderList();
+//   await checkEmptyState();
+// });
 
-  renderList();
-  checkEmptyState();
-});
-
-clearSearch.addEventListener("click", function(){
+clearSearch.addEventListener("click", async function(){
   searchInput.value = "";
   searchValue = "";
 
   clearSearch.classList.remove("show");
 
-  renderList();
-  checkEmptyState();
+  await renderList();
+  await checkEmptyState();
 
   searchInput.focus();
 });
@@ -171,8 +217,8 @@ function getTodoRank(todo){
   return 4;
 }
 
-function getProcessedTodos(){
-  let todos = getTodos();
+async function getProcessedTodos(){
+  let todos = await getTodos();
 
   todos = todos.map(todo => ({
     deleted: false,
@@ -248,54 +294,21 @@ function getProcessedTodos(){
   return todos;
 }
 
-function renderList(){
+async function renderList(){
+
+  const todos = await getTodos();
+  // console.log("Todos:", todos);
+
   list.innerHTML = "";
 
-  const todos = getProcessedTodos();
+  const processedTodos = await getProcessedTodos();
 
-  todos.forEach(todo => {
+  processedTodos.forEach(todo => {
     createItem(todo);
   });
 
-  updateStats();
-  checkEmptyState();
-}
-
-function initTheme(){
-  const savedTheme = localStorage.getItem("theme");
-
-  if(savedTheme){
-
-    if(savedTheme === "dark"){
-
-      document.body.classList.add("dark");
-
-    }
-
-  } else {
-
-    const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    
-    if(systemDark){
-
-      document.body.classList.add("dark");
-
-    }
-
-  }
-
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function(event){
-    const savedTheme = localStorage.getItem("theme");
-
-    if(savedTheme) return;
-
-    document.body.classList.toggle("dark", event.matches);
-  });
-
-  darkModeToggle.addEventListener("change", function(){
-    document.body.classList.toggle("dark", darkModeToggle.checked);
-    localStorage.setItem("theme", darkModeToggle.checked ? "dark" : "light");
-  });
+  await updateStats();
+  await checkEmptyState();
 }
 
 selectBtn.addEventListener("click", function(){
@@ -311,7 +324,7 @@ filterOptions.forEach(option => {
     selectedText.textContent = option.textContent.trim();
   }
 
-  option.addEventListener("click", function(){
+  option.addEventListener("click", async function(){
     filterOptions.forEach(opt => {
       opt.classList.remove("active");
     });
@@ -326,8 +339,8 @@ filterOptions.forEach(option => {
 
     customSelect.classList.remove("open");
 
-    renderList();
-    checkEmptyState();
+    await renderList();
+    await checkEmptyState();
   });
 
 });
@@ -345,7 +358,7 @@ sortOptionItems.forEach(option => {
     sortSelectedText.textContent = option.textContent.trim();
   }
 
-  option.addEventListener("click", function(){
+  option.addEventListener("click", async function(){
     sortOptionItems.forEach(opt => {
       opt.classList.remove("active");
     });
@@ -360,7 +373,7 @@ sortOptionItems.forEach(option => {
 
     sortSelect.classList.remove("open");
 
-    renderList();
+    await renderList();
   });
 });
 
@@ -376,10 +389,10 @@ document.addEventListener("click", function(event){
 
 });
 
-function checkEmptyState(){
+async function checkEmptyState(){
 
-  const allTodos = getTodos();
-  const filteredTodos = getProcessedTodos();
+  const allTodos = await getTodos();
+  const filteredTodos = await getProcessedTodos();
 
   if(allTodos.length === 0){
 
@@ -404,16 +417,8 @@ function checkEmptyState(){
 
 }
 
-function getTodos(){
-  return JSON.parse(localStorage.getItem("todoList")) || [];
-}
-
-function saveTodos(todos){
-  localStorage.setItem("todoList", JSON.stringify(todos));
-}
-
-function updateTodo(todoId, updates){
-  let todos = getTodos();
+async function updateTodo(todoId, updates){
+  let todos = await getTodos();
 
   todos = todos.map(todo => {
 
@@ -430,44 +435,33 @@ function updateTodo(todoId, updates){
 
   });
 
-  saveTodos(todos);
+  await saveTodos(todos);
 }
 
-function setTodoDeleted(todoId, deleted){
+async function setTodoDeleted(todoId, deleted){
 
-  updateTodo(todoId, {
+  await updateTodo(todoId, {
     deleted,
     updatedAt: Date.now()
   });
 
 }
 
-function setTodoPriority(todoId, priority){
+async function setTodoPriority(todoId, priority){
 
-  updateTodo(todoId, {
+  await updateTodo(todoId, {
     priority,
     updatedAt: Date.now()
   });
 }
 
-function setTodoCompleted(todoId, completed){
+async function setTodoCompleted(todoId, completed){
 
-  updateTodo(todoId, {
+  await updateTodo(todoId, {
     completed,
     updatedAt: Date.now()
   });
 
-}
-
-
-function showMessage(text){
-  tooltip.textContent = text;
-
-  tooltip.classList.add("show");
-
-  setTimeout(function(){
-    tooltip.classList.remove("show");
-  }, 2500);
 }
 
 function openDeleteModal(todo){
@@ -480,9 +474,9 @@ function closeDeleteModal(){
   todoToDelete = null;
 }
 
-function updateStats(){
+async function updateStats(){
 
-  const todos = getProcessedTodos();
+  const todos = await getProcessedTodos();
 
   const completedTodos = todos.filter(function(todo){
     return todo.completed;
@@ -497,12 +491,20 @@ function updateStats(){
 
 }
 
-function closeEditing(li){
+async function closeEditing(li){
   const inputEdit = li.querySelector(".edit-input");
 
   if(!inputEdit) return;
 
-  const originalTodo = getTodos().find(t => t.id === Number(li.dataset.id));
+  const todos = await getTodos();
+
+  const originalTodo = todos.find(t => t.id === Number(li.dataset.id));
+
+  if(!originalTodo){
+    li.classList.remove("editing");
+    return;
+  }
+
   const newSpan = createTodoText(originalTodo.text);
   const centerContent = li.querySelector(".center-content");
 
@@ -511,9 +513,9 @@ function closeEditing(li){
   li.classList.remove("editing");
 }
 
-function updateTodoText(todoId, text){
+async function updateTodoText(todoId, text){
 
-  updateTodo(todoId, {
+  await updateTodo(todoId, {
     text,
     updatedAt: Date.now()
   });
@@ -568,11 +570,11 @@ function createNotePanel(todo, li){
 
   noteInput.addEventListener("input", autoResizeTextarea);
 
-  noteInput.addEventListener("input", function(){
+  noteInput.addEventListener("input", async function(){
 
     autoResizeTextarea();
 
-    let todos = getTodos();
+    let todos = await getTodos();
 
     todos = todos.map(t => {
 
@@ -594,22 +596,6 @@ function createNotePanel(todo, li){
 
     notePanel.updateNoteIcon();
 
-    // const noteBtn = li.querySelector("note-btn");
-
-    // if(noteBtn){
-
-    //   if(todo.note && todo.note.trim() !== ""){
-    //     noteBtn.innerHTML = '<i class="bi bi-journal-text"></i>';
-    //     noteBtn.classList.add("activr");
-    //   } else {
-    //     noteBtn.innerHTML = '<i class="bi bi-journal"></i>';
-    //     noteBtn.classList.remove("active");
-    //   }
-
-    // }
-
-    // updateNoteIcon();
-
     clearTimeout(saveTimeout);
 
     saveStatus.textContent = "";
@@ -630,12 +616,12 @@ function createNotePanel(todo, li){
 
   const closeNoteBtn = notePanel.querySelector(".close-note-btn");
 
-  closeNoteBtn.addEventListener("click", function(event){
+  closeNoteBtn.addEventListener("click", async function(event){
     event.stopPropagation();
 
     li.classList.remove("note-open");
 
-    renderList();
+    await renderList();
   });
 
   return {
@@ -709,18 +695,18 @@ function createDeleteButton(todo, isTrashView){
     '<i class="bi bi-trash"></i>'
   );
 
-  deleteBtn.addEventListener("click", function(event){
+  deleteBtn.addEventListener("click", async function(event){
     event.stopPropagation();
 
     if(isTrashView){
 
-      let todos = getTodos();
+      let todos = await getTodos();
 
       todos = todos.filter(t => t.id !== todo.id);
 
-      saveTodos(todos);
+      await saveTodos(todos);
 
-      renderList();
+      await renderList();
 
       return;
 
@@ -734,9 +720,9 @@ function createDeleteButton(todo, isTrashView){
 
     }
 
-    setTodoDeleted(todo.id, true);
+    await setTodoDeleted(todo.id, true);
 
-    renderList();
+    await renderList();
   });
 
   return deleteBtn;
@@ -750,12 +736,12 @@ function createRestoreButton(todo){
     '<i class="bi bi-recycle"></i>'
   );
 
-  restoreBtn.addEventListener("click", function(event){
+  restoreBtn.addEventListener("click", async function(event){
     event.stopPropagation();
 
-    setTodoDeleted(todo.id, false);
+    await setTodoDeleted(todo.id, false);
 
-    renderList();
+    await renderList();
   });
 
   return restoreBtn;
@@ -776,12 +762,12 @@ function createPriorityButton(todo){
       priorityBtn.classList.remove("active");
   }
 
-  priorityBtn.addEventListener("click", function(event){
+  priorityBtn.addEventListener("click",  async function(event){
     event.stopPropagation();
 
-    setTodoPriority(todo.id, !todo.priority);
+    await setTodoPriority(todo.id, !todo.priority);
 
-    renderList();
+    await renderList();
 
   });
 
@@ -796,13 +782,13 @@ function createEditButton(todo, li, spanText, centerContent){
     '<i class="bi bi-pencil"></i>'
   );
 
-  editBtn.addEventListener("click", function(event){
+  editBtn.addEventListener("click", async function(event){
     event.stopPropagation();
 
     const currentEditing = document.querySelector("li.editing");
 
     if (currentEditing && currentEditing !== li){
-      closeEditing(currentEditing);
+      await closeEditing(currentEditing);
     }
 
     li.classList.add("editing");
@@ -821,7 +807,7 @@ function createEditButton(todo, li, spanText, centerContent){
       event.stopPropagation();
     });
 
-    inputEdit.addEventListener("keydown", function(event){
+    inputEdit.addEventListener("keydown", async function(event){
 
       if(event.key === "Escape"){
 
@@ -839,14 +825,14 @@ function createEditButton(todo, li, spanText, centerContent){
 
         const newText = inputEdit.value;
 
-        if(isDuplicateTodo(newText, todo.id)){
+        if(await isDuplicateTodo(newText, todo.id)){
           showMessage("این آیتم تکراری است");
           return;
         }
 
-        updateTodoText(todo.id, newText);
+        await updateTodoText(todo.id, newText);
 
-        renderList();
+        await renderList();
 
       }
 
@@ -864,21 +850,21 @@ function createConfirmButton(todo, li){
     '<i class="bi bi-floppy"></i>'
   );
 
-  confirmBtn.addEventListener("click", function(){
+  confirmBtn.addEventListener("click", async function(){
     const inputEdit = li.querySelector(".edit-input");
 
     if (!inputEdit) return;
 
     const newText = inputEdit.value;
 
-    if(isDuplicateTodo(newText, todo.id)){
+    if(await isDuplicateTodo(newText, todo.id)){
       showMessage("این آیتم تکراری است");
       return;
     }
 
-    updateTodoText(todo.id, newText);
+    await updateTodoText(todo.id, newText);
 
-    renderList();
+    await renderList();
 
   });
 
@@ -955,11 +941,11 @@ function createItem(todo) {
   checkbox.type = "checkbox";
   checkbox.checked = todo.completed;
 
-  checkbox.addEventListener("change", function(){
+  checkbox.addEventListener("change", async function(){
 
-    setTodoCompleted(todo.id, checkbox.checked);
+    await setTodoCompleted(todo.id, checkbox.checked);
 
-    renderList();
+    await renderList();
   
   });
 
@@ -1027,11 +1013,11 @@ function createItem(todo) {
 
 }
 
-function saveManualOrder(){
+async function saveManualOrder(){
 
     if(currentSort !== "manual") return;
 
-    const todos = getTodos();
+    const todos = await getTodos();
 
     [...list.children].forEach((li, index) => {
 
@@ -1044,10 +1030,10 @@ function saveManualOrder(){
       }
     });
     
-    saveTodos(todos);
+    await saveTodos(todos);
   }
 
-function addItem() {
+async function addItem() {
 
   const itemList = {
     id: Date.now(),
@@ -1061,9 +1047,9 @@ function addItem() {
     deleted: false
   };
 
-  let todos = getTodos();
+  let todos = await getTodos();
 
-  if(isDuplicateTodo(itemList.text)){
+  if(await isDuplicateTodo(itemList.text)){
     showMessage("این آیتم تکراری است");
     return;
   }
@@ -1072,16 +1058,14 @@ function addItem() {
   
   todos.push(itemList);
 
-  saveTodos(todos);
+  await saveTodos(todos);
 
-  renderList();
-
-  updateStats();
+  await renderList();
 
   input.value = "";
   input.focus();
 
-  checkEmptyState();
+  await checkEmptyState();
 
 }
 
@@ -1094,56 +1078,27 @@ input.addEventListener("keydown", function (event) {
   }
 });
 
-renderList();
-checkEmptyState();
+await renderList();
+await checkEmptyState();
 
-document.addEventListener("click", function(event){
+document.addEventListener("click", async function(event){
   const editingLi = document.querySelector("li.editing");
 
   if(!editingLi) return;
 
   if(!editingLi.contains(event.target)){
-    closeEditing(editingLi);
+    await closeEditing(editingLi);
   }
 });
 
-function setupTodoTooltip(element, text){
-  element.addEventListener("mouseenter", function(){
-    
-    if(element.scrollWidth <= element.clientWidth){
-      return;
-    }
-    
-    todoTooltip.textContent = text;
-    
-    const rect = element.getBoundingClientRect();
-    
-    todoTooltip.style.top = `${rect.bottom + 10}px`;
-    todoTooltip.style.left = `${rect.left + rect.width / 2}px`;
-    todoTooltip.style.transform = "translateX(-50%)";
+toolbarSettingsBtn.addEventListener("click", openSettingsModal);
 
-    todoTooltip.classList.add("show")
-  });
-  
-  element.addEventListener("mouseleave", function(){
-    todoTooltip.classList.remove("show");
-  });
-}
-
-settingsBtn.addEventListener("click", function(){
-
-  settingsModal.classList.add("show");
-
-});
-
-closeSettings.addEventListener("click", function(){
-  settingsModal.classList.remove("show");
-});
+closeSettings.addEventListener("click", closeSettingsModal);
 
 settingsModal.addEventListener("click", function(event){
 
   if(event.target === settingsModal){
-    settingsModal.classList.remove("show");
+    closeSettingsModal();
   }
 
 });
@@ -1156,15 +1111,167 @@ confirmDeleteToggle.addEventListener("change", function(){
 
 });
 
+let deferredPrompt = null;
+installAppItem.style.display = "none";
+
+window.addEventListener("beforeinstallprompt", event => {
+  console.log("PWA INSTALL AVAILABLE");
+  event.preventDefault();
+  deferredPrompt = event;
+  installAppItem.style.display = "flex";
+});
+
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("./service-worker.js")
-      .then(() => {
-        console.log("Service Worker Registered");
-      })
-      .catch((err) => {
-        console.error(err);
+  window.addEventListener("load", async () => {
+    const registration = await navigator.serviceWorker.register("./service-worker.js");
+
+    await registration.update();
+
+    // تابع برای نشان دادن توست
+    const showToast = (worker) => {
+      console.log("SHOW TOAST");
+      updateOverlay.classList.add("show");
+
+      updateBtn.onclick = () => {
+        worker.postMessage("SKIP_WAITING");
+      };
+    };
+
+    // ۱. اگر همین الان یک SW در انتظار (waiting) هست
+    if (registration.waiting) {
+      showToast(registration.waiting);
+    }
+
+    // ۲. اگر آپدیت جدیدی پیدا شد
+    registration.addEventListener("updatefound", () => {
+
+      console.log("UPDATE FOUND");
+
+      const newWorker = registration.installing;
+
+      newWorker.addEventListener("statechange", () => {
+        if(newWorker.state === "installed"){
+
+          console.log("SHOW TOAST");
+          showToast(newWorker);
+        
+        }
       });
+    });
+
+    // چک کردن دوره‌ای برای نسخه جدید (هر ۱۰ ثانیه)
+    setInterval(() => {
+      registration.update();
+    }, 10000);
   });
+
+  // ۳. وقتی نسخه جدید فعال شد، صفحه را ریفرش کن
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    window.location.reload();
+  });
+
 }
+
+toolbarSearchBtn.addEventListener("click", () => {
+  toolbarSearchBox.classList.add("show");
+  toolbarSearchBtn.style.display = "none";
+  toolbarSearchInput.focus();
+});
+
+toolbarSearchClose.addEventListener("click", async () => {
+  toolbarSearchBox.classList.remove("show");
+  toolbarSearchBtn.style.display = "flex";
+  toolbarSearchInput.value = "";
+  searchValue = "";
+  await renderList();
+});
+
+toolbarSearchInput.addEventListener("input", async function(){
+  searchValue = toolbarSearchInput.value.toLowerCase();
+  await renderList();
+  await checkEmptyState();
+});
+
+toolbarSearchInput.addEventListener("keydown", async function(event){
+  if(event.key === "Escape"){
+    toolbarSearchBox.classList.remove("show");
+    toolbarSearchBtn.style.display = "flex";
+    toolbarSearchInput.value = "";
+    searchValue = "";
+    await renderList();
+  }
+});
+
+document.addEventListener("keydown", function(event){
+  if(event.ctrlKey && event.key === "f"){
+    event.preventDefault();
+    toolbarSearchBox.classList.add("show");
+    toolbarSearchBtn.style.display = "none";
+    toolbarSearchInput.focus();
+  }
+});
+
+exportBtn.addEventListener("click", exportTodos);
+
+importBtn.addEventListener("click", () => {
+  importFile.click();
+});
+
+importFile.addEventListener(
+  "change",
+  async function(){
+
+    const file =
+      importFile.files[0];
+
+    if(!file) return;
+
+    try{
+
+      const todos =
+        await importTodos(file);
+
+      const confirmed =
+        confirm(
+          "اطلاعات فعلی جایگزین شوند؟"
+        );
+
+      if(!confirmed){
+        return;
+      }
+
+      await saveTodos(todos);
+
+      await renderList();
+
+      console.log("SHOW SUCCESS MESSAGE");
+      showMessage(
+        "اطلاعات با موفقیت بازیابی شد"
+      );
+
+    }
+
+    catch(error){
+
+      console.error(error);
+
+      showMessage(
+        "فایل معتبر نیست"
+      );
+
+    }
+
+    importFile.value = "";
+
+  }
+);
+
+installAppBtn.addEventListener("click", async() => {
+  if(!deferredPrompt){
+    return;
+  }
+  deferredPrompt.prompt();
+  const result = await deferredPrompt.userChoice;
+  console.log("INSTALL RESULT:", result.outcome);
+  deferredPrompt = null;
+});

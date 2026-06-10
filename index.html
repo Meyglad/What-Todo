@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="favicon.ico">
 </head>
 <body>
 
@@ -16,16 +17,16 @@
 
       <h2 class="titr">What ToDo</h2>
 
-      <button id="settingsBtn">
+      <!-- <button id="settingsBtn">
         <i class="bi bi-gear"></i>
-      </button>
+      </button> -->
 
       <div class=" input-container">
         <input type="text" id="input" placeholder="یه کاری بنویس...">
         <button id="addBtn">
           ↓
         </button>
-        <div id="tooltip"></div>
+        <!-- <div id="tooltip"></div> -->
       </div>
 
       <div class="search-container">
@@ -102,6 +103,24 @@
           <span id="remainingCount">0</span>
           باقی مانده
         </div>
+        <div class="toolbar">
+          <div id="toolbarSearchBox" class="toolbar-search-box">
+            <input
+              type="text"
+              id="toolbarSearchInput"
+              placeholder="جستجو..."
+            >
+            <button id="toolbarSearchClose">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+          <button id="toolbarSearchBtn">
+            <i class="bi bi-search"></i>
+          </button>
+          <button id="toolbarSettingsBtn">
+            <i class="bi bi-gear"></i>
+          </button>
+        </div>
       </div>
 
     </div>
@@ -158,6 +177,33 @@
 
         </div>
 
+        <div class="settings-item" id="installAppItem">
+          <label>نصب برنامه</label>
+          <button id="installAppBtn">نصب</button>
+        </div>
+
+        <div class="settings-section">
+          <button id="exportBtn" class="settings-action-btn">
+            <i class="bi bi-download"></i>
+            خروجی گرفتن از اطلاعات
+          </button>
+          <button id="importBtn" class="settings-action-btn">
+            <i class="bi bi-upload"></i>
+            بازیابی اطلاعات
+          </button>
+        </div>
+
+        <div class="settings-section">
+          <div class="app-version">
+            <span>نسخه برنامه</span>
+            <span id="appVersionText">1.0.0</span>
+          </div>
+          <div class="app-version">
+            <span>آخرین بروزرسانی</span>
+            <span id="appUpdateDate">1405/01/01</span>
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -187,6 +233,21 @@
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <div id="updateOverlay" class="update-overlay">
+    <div class="update-modal">
+      <div class="update-icon">
+        🚀
+      </div>
+      <h2>نسخه جدید آماده است</h2>
+      <p id="updateVersionText"></p>
+      <button id="updateBtn" class="update-btn">
+        بروزرسانی برنامه
+      </button>
+    </div>
+  </div>
+
+  <input type="file" id="importFile" accept=".json" hidden>
+  <div id="tooltip"></div>
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
