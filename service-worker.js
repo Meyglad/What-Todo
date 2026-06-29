@@ -1,4 +1,4 @@
-const CACHE_NAME = "1.0.11";
+const CACHE_NAME = "1.0.17";
 
 const FILES_TO_CACHE = [
   "./",
@@ -12,6 +12,7 @@ const FILES_TO_CACHE = [
   "./js/storage.js",
   "./js/theme.js",
   "./js/tooltip.js",
+  "./js/changelog.js",
   "./js/ui.js",
 
   "./fonts/IRANSansXFaNum-Regular.woff2",
@@ -19,6 +20,20 @@ const FILES_TO_CACHE = [
   "./icons/icon-192.png",
   "./icons/icon-512.png"
 ];
+
+const STATIC_EXTENSIONS = [
+  ".css",
+  ".js",
+  ".woff2",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".svg",
+  ".webp",
+  ".ico"
+];
+
+const NAVIGATION_FALLBACK = "./index.html";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -48,24 +63,96 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", (event) => {
 
-  event.respondWith(
+  if(event.request.method !== "GET"){
+    return;
+  }
 
-    caches.open(CACHE_NAME).then(async cache => {
+  const requestUrl = new URL(event.request.url);
+  const isSameOrigin = requestUrl.origin === self.location.origin;
 
-      const cachedResponse = await cache.match(event.request);
+  // Never cache external/API requests (e.g., Supabase endpoints).
+  if(!isSameOrigin || requestUrl.pathname.startsWith("/rest/v1/") || requestUrl.pathname.startsWith("/auth/v1/")){
+    return;
+  }
 
-      const networkFetch = fetch(event.request).then(response => {
-        cache.put(event.request, response.clone());
-        return response;
-      })
-      .catch(() => cachedResponse);
-      
-      return cachedResponse || networkFetch;
-    })
+  const isNavigation = event.request.mode === "navigate";
+  const isStaticAsset = STATIC_EXTENSIONS.some(ext => requestUrl.pathname.endsWith(ext));
 
-  );
+  if(isNavigation){
+    event.respondWith(networkFirst(event.request, NAVIGATION_FALLBACK));
+    return;
+  }
+
+  if(isStaticAsset){
+    event.respondWith(cacheFirst(event.request));
+    return;
+  }
+
+  event.respondWith(staleWhileRevalidate(event.request));
 
 });
+
+async function cacheFirst(request){
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+
+  if(cached){
+    return cached;
+  }
+
+  const networkResponse = await fetch(request);
+
+  if(networkResponse && networkResponse.ok){
+    cache.put(request, networkResponse.clone());
+  }
+
+  return networkResponse;
+}
+
+async function networkFirst(request, fallbackPath = null){
+  const cache = await caches.open(CACHE_NAME);
+
+  try{
+    const networkResponse = await fetch(request);
+
+    if(networkResponse && networkResponse.ok){
+      cache.put(request, networkResponse.clone());
+    }
+
+    return networkResponse;
+  }
+  catch(error){
+    const cached = await cache.match(request);
+    if(cached){
+      return cached;
+    }
+
+    if(fallbackPath){
+      const fallback = await cache.match(fallbackPath);
+      if(fallback){
+        return fallback;
+      }
+    }
+
+    throw error;
+  }
+}
+
+async function staleWhileRevalidate(request){
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+
+  const networkPromise = fetch(request)
+    .then(response => {
+      if(response && response.ok){
+        cache.put(request, response.clone());
+      }
+      return response;
+    })
+    .catch(() => cached);
+
+  return cached || networkPromise;
+}
 
 self.addEventListener("message", event => {
 

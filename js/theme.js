@@ -1,10 +1,18 @@
 function initTheme(darkModeToggle){
+
+  function applyTheme(isDark) {
+    document.documentElement.classList.toggle("dark", isDark);
+    document.body.classList.toggle("dark", isDark);
+  }
+
   const savedTheme = localStorage.getItem("theme");
 
   if(savedTheme){
 
     if(savedTheme === "dark"){
-      document.body.classList.add("dark");
+      applyTheme(true);
+    } else {
+      applyTheme(false);
     }
 
   } else {
@@ -12,7 +20,9 @@ function initTheme(darkModeToggle){
     const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     
     if(systemDark){
-      document.body.classList.add("dark");
+      applyTheme(true);
+    } else {
+      applyTheme(false);
     }
 
   }
@@ -22,12 +32,12 @@ function initTheme(darkModeToggle){
 
     if(savedTheme) return;
 
-    document.body.classList.toggle("dark", event.matches);
+    applyTheme(event.matches);
   });
 
   darkModeToggle.addEventListener("change", function(){
 
-    document.body.classList.toggle("dark", darkModeToggle.checked);
+    applyTheme(darkModeToggle.checked);
     localStorage.setItem("theme", darkModeToggle.checked ? "dark" : "light");
 
   });
